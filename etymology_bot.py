@@ -8,7 +8,7 @@ from dotenv import dotenv_values
 from random import choice
 
 config = dotenv_values(".env")
-G_CHANNEL = ""
+CHANNEL_FOR_SERVER = dict()
 logging.basicConfig(level=logging.INFO)
 
 bot = commands.Bot(command_prefix='!@')
@@ -21,6 +21,15 @@ def get_random_greeting():
 @bot.event
 async def on_ready():
     logging.info('Logged in as {0.user}'.format(bot))
+
+@bot.command()
+async def DEBUG(ctx):
+    if str(ctx.author.id) != config["DEVELOPER_ID"]:
+        print('nope.')
+        print(ctx.author.id)
+        return
+    await ctx.send(repr(CHANNEL_FOR_SERVER))
+    
 
 @bot.command()
 async def etym(ctx, word: str):
@@ -45,23 +54,22 @@ async def etym(ctx, word: str):
         i += 2
     msg += f"\n<{url}>"
 
-    if G_CHANNEL == "":
+    if CHANNEL_FOR_SERVER.get(ctx.guild.id) == None:
         await ctx.send(msg)
     else:
-        await G_CHANNEL.send(msg)
+        await CHANNEL_FOR_SERVER[ctx.guild.id].send(msg)
 
 @bot.command(name='etym_bot_channel')
 async def set_channel(ctx, msg_body: str):
-    global G_CHANNEL
+    global CHANNEL_FOR_SERVER
     logging.info(f'Message body: {msg_body}')
     desired_channel = re.search("<#\d+>",msg_body)
     if desired_channel:
         # slicing prevents characters like <,#,> from being parsed
         channel = int(desired_channel.group()[2:-1])
         print(f"CHANNEL: {channel}")
-        G_CHANNEL = bot.get_channel(channel)
-        print(type(G_CHANNEL))
-        await G_CHANNEL.send("All messages from this bot will arrive here now.")
+        CHANNEL_FOR_SERVER[ctx.guild.id] = bot.get_channel(channel)
+        await CHANNEL_FOR_SERVER[ctx.guild.id].send("All messages from this bot will arrive here now.")
     else:
         await ctx.reply("Please specify a channel to send messages to.")
 
